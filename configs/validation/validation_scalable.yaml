@@ -12,7 +12,7 @@ Dataset:
   pin_memory: True
   persistent_workers: True
   train_raw_dir:
-  val_raw_dir: ["data/valid_demo"]
+  val_raw_dir: ["data/process/validation"]
   test_raw_dir:
   TargetBuilder: WaymoTargetBuilder
   train_processed_dir:
