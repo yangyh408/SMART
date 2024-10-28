@@ -3,6 +3,7 @@ from typing import Optional
 import pytorch_lightning as pl
 from torch_geometric.loader import DataLoader
 from smart.datasets.scalable_dataset import MultiDataset
+from smart.datasets.processed_dataset import ProcessedDataset
 from smart.transforms import WaymoTargetBuilder
 
 
@@ -13,6 +14,7 @@ class MultiDataModule(pl.LightningDataModule):
 
     dataset = {
         "scalable": MultiDataset,
+        "processed": ProcessedDataset,
     }
 
     def __init__(self,

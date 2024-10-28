@@ -35,7 +35,7 @@ class MultiDataset(Dataset):
             raise ValueError(f'{split} is not a valid split')
         self.split = split
         self.training = split == 'train'
-        self.logger.debug("Starting loading dataset")
+        self.logger.debug("Starting loading dataset with MultiDataset")
         self._raw_file_names = []
         self._raw_paths = []
         self._raw_file_dataset = []
@@ -57,7 +57,8 @@ class MultiDataset(Dataset):
             self._processed_file_names = split_datainfo[split]
         self.dim = dim
         self.num_historical_steps = num_historical_steps
-        self._num_samples = len(self._processed_file_names) - 1 if processed_dir is not None else len(self._raw_file_names)
+        # self._num_samples = len(self._processed_file_names) - 1 if processed_dir is not None else len(self._raw_file_names)
+        self._num_samples = len(self._raw_file_names)
         self.logger.debug("The number of {} dataset is ".format(split) + str(self._num_samples))
         self.token_processor = TokenProcessor(2048)
         super(MultiDataset, self).__init__(root=root, transform=transform, pre_transform=None, pre_filter=None)

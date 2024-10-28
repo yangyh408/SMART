@@ -7,34 +7,36 @@ time_info: &time_info
 
 Dataset:
   root:
-  train_batch_size: 8 #! [4, 8]
-  val_batch_size: 8
-  test_batch_size: 8
+  train_batch_size: 16
+  val_batch_size: 16
+  test_batch_size: 16
   shuffle: True
-  num_workers: 8 #! [4, 8]
+  num_workers: 16
   pin_memory: True
   persistent_workers: True
-  train_raw_dir: ["data/process/training"]
-  val_raw_dir: ["data/process/validation"]
-  test_raw_dir: ["data/process/testing"]
+  train_raw_dir: ["/share/home/tj24005/data/smart_waymo_processed/training"]
+  val_raw_dir: ["/share/home/tj24005/data/smart_waymo_processed/validation"]
+  test_raw_dir: ["/share/home/tj24005/data/smart_waymo_processed/testing"]
   transform: WaymoTargetBuilder
-  train_processed_dir:
-  val_processed_dir:
-  test_processed_dir:
-  dataset: "scalable"
+  train_processed_dir: ["/ssdfs/datahome/tj24005/smart_waymo_processed/process/training"]
+  val_processed_dir: ["/ssdfs/datahome/tj24005/smart_waymo_processed/process/validation"]
+  test_processed_dir: ["/ssdfs/datahome/tj24005/smart_waymo_processed/process/testing"]
+  dataset: "processed"  # ["scalable", "processed"]
   <<: *time_info
 
 Trainer:
   strategy: ddp_find_unused_parameters_false
   accelerator: "gpu"
   devices: -1
-  max_epochs: 32
+  max_epochs: 12 #! 16
   num_nodes: 1
   mode:
   ckpt_path:
   precision: 32
-  accumulate_grad_batches: 1
-  num_sanity_val_steps: -1
+  accumulate_grad_batches: 2
+  num_sanity_val_steps: 0
+  gradient_clip_val: 0.5
+  check_val_every_n_epoch: 2
 
 Model:
   mode: "train"
@@ -49,7 +51,7 @@ Model:
   head_dim: 16
   dropout: 0.1
   num_freq_bands: 64
-  lr: 0.0001
+  lr: 0.0002
   warmup_steps: 0
   total_steps: 32
   decoder:
