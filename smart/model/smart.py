@@ -100,7 +100,7 @@ class SMART(pl.LightningModule):
         self.test_predictions = dict()
         self.cls_loss = nn.CrossEntropyLoss(label_smoothing=0.1)
         self.map_cls_loss = nn.CrossEntropyLoss(label_smoothing=0.1)
-        self.inference_token = False
+        self.inference_token = True
         self.rollout_num = 1
 
     def get_trajectory_token(self):

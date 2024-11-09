@@ -7,12 +7,12 @@ time_info: &time_info
 Dataset:
   root:
   batch_size: 1
-  shuffle: True
-  num_workers: 1
+  shuffle: False
+  num_workers: 4
   pin_memory: True
   persistent_workers: True
   train_raw_dir:
-  val_raw_dir: ["data/process/validation"]
+  val_raw_dir: ["/media/yangyh408/4A259082626F01B9/smart_waymo_processed/raw/validation"]
   test_raw_dir:
   TargetBuilder: WaymoTargetBuilder
   train_processed_dir:
@@ -46,7 +46,7 @@ Model:
   head_dim: 16
   dropout: 0.1
   num_freq_bands: 64
-  lr: 0.0005
+  lr: 0.0002
   warmup_steps: 0
   total_steps: 32
   decoder:
