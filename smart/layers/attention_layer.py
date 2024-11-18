@@ -16,7 +16,7 @@ class AttentionLayer(MessagePassing):
                  num_heads: int,
                  head_dim: int,
                  dropout: float,
-                 bipartite: bool,
+                 bipartite: bool,   # True为交叉注意力机制，False为自注意力机制
                  has_pos_emb: bool,
                  **kwargs) -> None:
         super(AttentionLayer, self).__init__(aggr='add', node_dim=0, **kwargs)
@@ -82,6 +82,7 @@ class AttentionLayer(MessagePassing):
             k_j = k_j + self.to_k_r(r).view(-1, self.num_heads, self.head_dim)
             v_j = v_j + self.to_v_r(r).view(-1, self.num_heads, self.head_dim)
         sim = (q_i * k_j).sum(dim=-1) * self.scale
+        # index用于指定sim的分组规则，即哪些边的注意力分数应该归一化为一个目标节点的范围。例如，如果多个边 (i,j)和 (k,j) 具有相同的目标节点j，它们的 sim 值会一起参与 softmax 归一化。
         attn = softmax(sim, index, ptr)
         self.attention_weight = attn.sum(-1).detach()
         attn = self.attn_drop(attn)

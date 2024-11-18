@@ -8,6 +8,10 @@ from smart.utils import wrap_angle
 import os
 
 def cal_polygon_contour(x, y, theta, width, length):
+    """
+    函数功能：计算一个矩形多边形的四个顶点坐标（轮廓）
+    返回值：返回一个形状为 [n, 4, 2] 的数组 polygon_contour，表示每个矩形的四个顶点的坐标，方便后续用作绘制或碰撞检测等应用。
+    """
     left_front_x = x + 0.5 * length * np.cos(theta) - 0.5 * width * np.sin(theta)
     left_front_y = y + 0.5 * length * np.sin(theta) + 0.5 * width * np.cos(theta)
     left_front = np.column_stack((left_front_x, left_front_y))
@@ -148,6 +152,11 @@ class TokenProcessor:
         return data
 
     def get_trajectory_token(self):
+        """
+        1. 从文件中加载 agent 和地图的轨迹 token 数据。
+        2. 计算每个 agent 最后 token 的朝向，通过旋转矩阵进行位置的旋转变换，并归一化 token 的位置。
+        3. 将最终处理的 token 位置和朝向保存到 self.token_last 中，用于后续的匹配或轨迹预测过程。
+        """
         agent_token_data = pickle.load(open(self.agent_token_path, 'rb'))
         map_token_traj = pickle.load(open(self.map_token_traj_path, 'rb'))
         self.trajectory_token = agent_token_data['token']
@@ -155,20 +164,28 @@ class TokenProcessor:
         self.map_token = {'traj_src': map_token_traj['traj_src'], }
         self.token_last = {}
         for k, v in self.trajectory_token_all.items():
+            # 计算每个 agent 的最终 token 朝向
             token_last = torch.from_numpy(v[:, -2:]).to(torch.float)
             diff_xy = token_last[:, 0, 0] - token_last[:, 0, 3]
             theta = torch.arctan2(diff_xy[:, 1], diff_xy[:, 0])
             cos, sin = theta.cos(), theta.sin()
+            # 生成旋转矩阵
             rot_mat = theta.new_zeros(token_last.shape[0], 2, 2)
             rot_mat[:, 0, 0] = cos
             rot_mat[:, 0, 1] = -sin
             rot_mat[:, 1, 0] = sin
             rot_mat[:, 1, 1] = cos
+            # 应用旋转矩阵并归一化 token 数据
             agent_token = torch.bmm(token_last[:, 1], rot_mat)
             agent_token -= token_last[:, 0].mean(1)[:, None, :]
             self.token_last[k] = agent_token.numpy()
 
     def clean_heading(self, data):
+        """
+            这个函数 clean_heading 的主要功能是对“heading” (朝向角度) 进行清理，以修复明显异常或突然变化的朝向角度
+            （例如，当相邻帧之间的朝向差异超过一定阈值时），从而平滑朝向数据。
+            具体而言，代码通过对相邻帧的朝向差异进行检测和修正，使得朝向变化更连贯。
+        """
         heading = data['agent']['heading']
         valid = data['agent']['valid_mask']
         pi = torch.tensor(torch.pi)
@@ -195,6 +212,7 @@ class TokenProcessor:
     def tokenize_agent(self, data):
         if data['agent']["velocity"].shape[1] == 90:
             print(data['scenario_id'], data['agent']["velocity"].shape)
+        # 创建插值掩码 interplote_mask，用于标记那些当前时间步为无效但坐标非零的位置，以确定需要插值的数据点
         interplote_mask = (data['agent']['valid_mask'][:, self.current_step] == False) * (
                 data['agent']['position'][:, self.current_step, 0] != 0)
         if data['agent']["velocity"].shape[-1] == 2:
@@ -222,9 +240,10 @@ class TokenProcessor:
 
         agent_pos = data['agent']['position'][:, :, :2]
         valid_mask = data['agent']['valid_mask']
-
-        valid_mask_shift = valid_mask.unfold(1, self.shift + 1, self.shift)
-        token_valid_mask = valid_mask_shift[:, :, 0] * valid_mask_shift[:, :, -1]
+        # 以下标1为起点，长度为6，间隔为5创建滑动窗口
+        valid_mask_shift = valid_mask.unfold(1, self.shift + 1, self.shift)         # [NA, 18, 6]
+        # 每个滑动窗口的起止都为true时窗口才有效
+        token_valid_mask = valid_mask_shift[:, :, 0] * valid_mask_shift[:, :, -1]   # [NA, 18]
         agent_type = data['agent']['type']
         agent_category = data['agent']['category']
         agent_heading = data['agent']['heading']
@@ -271,13 +290,13 @@ class TokenProcessor:
         if not self.training:
             token_valid_mask[matching_extra_mask, 1] = True
 
-        data['agent']['token_idx'] = token_index
-        data['agent']['token_contour'] = token_contour
-        token_pos = token_contour.mean(dim=2)
-        data['agent']['token_pos'] = token_pos
+        data['agent']['token_idx'] = token_index            # [NA, 18]
+        data['agent']['token_contour'] = token_contour      # [NA, 18, 4, 2]
+        token_pos = token_contour.mean(dim=2)               
+        data['agent']['token_pos'] = token_pos              # [NA, 18, 2]
         diff_xy = token_contour[:, :, 0, :] - token_contour[:, :, 3, :]
-        data['agent']['token_heading'] = torch.arctan2(diff_xy[:, :, 1], diff_xy[:, :, 0])
-        data['agent']['agent_valid_mask'] = token_valid_mask
+        data['agent']['token_heading'] = torch.arctan2(diff_xy[:, :, 1], diff_xy[:, :, 0])  # [NA, 18]
+        data['agent']['agent_valid_mask'] = token_valid_mask                                # [NA, 18]
 
         vel = torch.cat([token_pos.new_zeros(data['agent']['num_nodes'], 1, 2),
                          ((token_pos[:, 1:] - token_pos[:, :-1]) / (0.1 * self.shift))], dim=1)
@@ -293,6 +312,9 @@ class TokenProcessor:
         return data
 
     def match_token(self, pos, valid_mask, heading, category, agent_category, extra_mask):
+        """
+        将轨迹位置和朝向数据与预定义的 token 数据进行匹配，以便在场景中的每个时间步中都能追踪到正确的 token。
+        """
         agent_token_src = self.trajectory_token[category]
         token_last = self.token_last[category]
         if self.shift <= 2:
@@ -318,8 +340,8 @@ class TokenProcessor:
 
         prev_heading = heading[:, 0]
         prev_pos = pos[:, 0]
-        agent_num, num_step, feat_dim = pos.shape
-        token_num, token_contour_dim, feat_dim = agent_token_src.shape
+        agent_num, num_step, feat_dim = pos.shape   # [NA, 91, 2]
+        token_num, token_contour_dim, feat_dim = agent_token_src.shape  # [2048, 4, 2]
         agent_token_src = agent_token_src.reshape(1, token_num * token_contour_dim, feat_dim).repeat(agent_num, 0)
         token_last = token_last.reshape(1, token_num * token_contour_dim, feat_dim).repeat(extra_mask.sum(), 0)
         token_index_list = []
@@ -327,9 +349,12 @@ class TokenProcessor:
         prev_token_idx = None
 
         for i in range(self.shift, pos.shape[1], self.shift):
+            # 上一token所在位置航向角（5帧前）
             theta = prev_heading
+            # 当前航向角和位置
             cur_heading = heading[:, i]
             cur_pos = pos[:, i]
+            # 将归一化的原始token信息以上一时刻位置和航向状态为基准调整到全局坐标系
             cos, sin = theta.cos(), theta.sin()
             rot_mat = theta.new_zeros(agent_num, 2, 2)
             rot_mat[:, 0, 0] = cos
@@ -342,7 +367,9 @@ class TokenProcessor:
                                                                                                               feat_dim)
             agent_token_world += prev_pos[:, None, None, :]
 
+            # 获取当前所在位置的矩形四角信息
             cur_contour = cal_polygon_contour(cur_pos[:, 0], cur_pos[:, 1], cur_heading, width, length)
+            # 找出与当前距离最近的token作为匹配对象，记录该tokenid
             agent_token_index = torch.from_numpy(np.argmin(
                 np.mean(np.sqrt(np.sum((cur_contour[:, None, ...] - agent_token_world.numpy()) ** 2, axis=-1)), axis=2),
                 axis=-1))
@@ -355,12 +382,14 @@ class TokenProcessor:
                 sample_topk = np.random.choice(range(0, topk_indices.shape[1]), topk_indices.shape[0])
                 agent_token_index[same_idx] = \
                     torch.from_numpy(topk_indices[np.arange(topk_indices.shape[0]), sample_topk])[same_idx]
-
+            # 将匹配的tokenid转换为矩形四角坐标
             token_contour_select = agent_token_world[torch.arange(agent_num), agent_token_index]
 
+            # 将当前帧信息更新为上一帧信息
             diff_xy = token_contour_select[:, 0, :] - token_contour_select[:, 3, :]
-
+            # 数据集中原航向角
             prev_heading = heading[:, i].clone()
+            # 如果是这一帧被预测的对象，则用当前token所在状态更新航向和位置信息
             prev_heading[valid_mask[:, i - self.shift]] = torch.arctan2(diff_xy[:, 1], diff_xy[:, 0])[
                 valid_mask[:, i - self.shift]]
 
@@ -373,7 +402,7 @@ class TokenProcessor:
         token_index = torch.cat(token_index_list, dim=1)
         token_contour = torch.cat(token_contour_list, dim=1)
 
-        # extra matching
+        # extra matching（如果在第十一帧存在但第六帧不存在的代理，则根据第十帧的状态来匹配token信息）
         if not self.training:
             theta = heading[extra_mask, self.current_step - 1]
             prev_pos = pos[extra_mask, self.current_step - 1]
@@ -417,7 +446,9 @@ class TokenProcessor:
         split_polygon_type = []
         data['map_point']['type'].unique()
 
+        # 对多段线进行便利
         for i in sorted(np.unique(pt2pl[1])):
+            # 每一条多段线对应的点
             index = pt2pl[0, pt2pl[1] == i]
             polygon_type = data['map_polygon']["type"][i]
             cur_side = pt_side[index]

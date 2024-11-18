@@ -16,6 +16,7 @@ class FourierEmbedding(nn.Module):
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
 
+        # 这里定义了一个嵌入层 self.freqs，它为每个输入维度生成一组频率。这些频率将会分布在一个范围内
         self.freqs = nn.Embedding(input_dim, num_freq_bands) if input_dim != 0 else None
         self.mlps = nn.ModuleList(
             [nn.Sequential(
@@ -41,8 +42,11 @@ class FourierEmbedding(nn.Module):
             else:
                 raise ValueError('Both continuous_inputs and categorical_embs are None')
         else:
+            # [E, 3, 64]
+            # self.freqs.weight：这个参数矩阵存储了每个频带的频率值。对于每个输入维度 input_dim，生成 num_freq_bands 个频率值。
             x = continuous_inputs.unsqueeze(-1) * self.freqs.weight * 2 * math.pi
             # Warning: if your data are noisy, don't use learnable sinusoidal embedding
+            # [E, 3, 129(64+64+1)]
             x = torch.cat([x.cos(), x.sin(), continuous_inputs.unsqueeze(-1)], dim=-1)
             continuous_embs: List[Optional[torch.Tensor]] = [None] * self.input_dim
             for i in range(self.input_dim):

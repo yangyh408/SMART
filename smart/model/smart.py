@@ -76,22 +76,22 @@ class SMART(pl.LightningModule):
         token_data = self.get_trajectory_token()
         self.encoder = SMARTDecoder(
             dataset=model_config.dataset,
-            input_dim=model_config.input_dim,
-            hidden_dim=model_config.hidden_dim,
-            num_historical_steps=model_config.num_historical_steps,
-            num_freq_bands=model_config.num_freq_bands,
-            num_heads=model_config.num_heads,
-            head_dim=model_config.head_dim,
-            dropout=model_config.dropout,
-            num_map_layers=model_config.decoder.num_map_layers,
-            num_agent_layers=model_config.decoder.num_agent_layers,
-            pl2pl_radius=model_config.decoder.pl2pl_radius,
-            pl2a_radius=model_config.decoder.pl2a_radius,
-            a2a_radius=model_config.decoder.a2a_radius,
-            time_span=model_config.decoder.time_span,
-            map_token={'traj_src': self.map_token['traj_src']},
-            token_data=token_data,
-            token_size=model_config.decoder.token_size
+            input_dim=model_config.input_dim,                           # 2, 输入维度（轨迹维度，2为xy，3为xyz）
+            hidden_dim=model_config.hidden_dim,                         # 128, 隐藏层维度（embedding后的张量维度）
+            num_historical_steps=model_config.num_historical_steps,     # 11
+            num_freq_bands=model_config.num_freq_bands,                 # 64, 傅里叶频带数量，用于在不同地图token对之间进行FourierEmbedding时使用
+            num_heads=model_config.num_heads,                           # 8, 多头注意力机制的头数
+            head_dim=model_config.head_dim,                             # 16, 每个头的维度 (16=hidden_dim[128]/num_heads[8])
+            dropout=model_config.dropout,                               # 0.1
+            num_map_layers=model_config.decoder.num_map_layers,         # 3, 在MapDecoder中注意力机制层数
+            num_agent_layers=model_config.decoder.num_agent_layers,     # 6, 在AgentDevoder中的三种注意力机制的层数
+            pl2pl_radius=model_config.decoder.pl2pl_radius,             # 10, MapDecoder中获取多段线之间关联的距离阈值
+            pl2a_radius=model_config.decoder.pl2a_radius,               # 30, AgentDecoder中获取同一时刻代理与多段线间关联的距离阈值
+            a2a_radius=model_config.decoder.a2a_radius,                 # 60, AgentDecoder中获取同一时刻关联代理的距离阈值
+            time_span=model_config.decoder.time_span,                   # 30, AgentDecoder中获取同一代理不同时刻状态信息的时间范围
+            map_token={'traj_src': self.map_token['traj_src']},         # [1024, 11, 2] 每个地图token对应的多段线信息
+            token_data=token_data,                                      # 轨迹token信息
+            token_size=model_config.decoder.token_size                  # 2048
         )
         self.minADE = minADE(max_guesses=1)
         self.minFDE = minFDE(max_guesses=1)
@@ -118,8 +118,8 @@ class SMART(pl.LightningModule):
                                     self.map_token['traj_src'][:, -1, 0]-self.map_token['traj_src'][:, -2, 0])
         indices = torch.linspace(0, self.map_token['traj_src'].shape[1]-1, steps=self.argmin_sample_len).long()
         self.map_token['sample_pt'] = torch.from_numpy(self.map_token['traj_src'][:, indices]).to(torch.float)
-        self.map_token['traj_end_theta'] = torch.from_numpy(traj_end_theta).to(torch.float)
-        self.map_token['traj_src'] = torch.from_numpy(self.map_token['traj_src']).to(torch.float)
+        self.map_token['traj_end_theta'] = torch.from_numpy(traj_end_theta).to(torch.float)                     # [1024]
+        self.map_token['traj_src'] = torch.from_numpy(self.map_token['traj_src']).to(torch.float)               # [1024, 11, 2]
 
     def forward(self, data: HeteroData):
         res = self.encoder(data)

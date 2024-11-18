@@ -7,6 +7,11 @@ import torch
 def angle_between_2d_vectors(
         ctr_vector: torch.Tensor,
         nbr_vector: torch.Tensor) -> torch.Tensor:
+    """
+    以ctr_vector为基准向量，求 ctr_vector 到 nbr_vector 的有向夹角
+    - 结果为正值：nbr_vector 在 ctr_vector 的逆时针方向
+    - 结果为负值：nbr_vector 在 ctr_vector 的顺时针方向
+    """
     return torch.atan2(ctr_vector[..., 0] * nbr_vector[..., 1] - ctr_vector[..., 1] * nbr_vector[..., 0],
                        (ctr_vector[..., :2] * nbr_vector[..., :2]).sum(dim=-1))
 
