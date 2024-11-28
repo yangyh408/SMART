@@ -10,6 +10,7 @@ from torch_geometric.data import Batch, HeteroData
 from torch_geometric.utils import dense_to_sparse, subgraph
 from smart.utils import angle_between_2d_vectors, weight_init, wrap_angle
 import math
+import time
 
 
 def cal_polygon_contour(x, y, theta, width, length):
@@ -464,6 +465,7 @@ class SMARTAgentDecoder(nn.Module):
         pred_prob = torch.zeros(data["agent"].num_nodes, self.num_recurrent_steps_val // self.shift, device=feat_a.device)  # [NA, 16], 各代理在各时刻所采样token的分布概率
         next_token_idx_list = []            # 记录每个预测步各代理预测的token索引
         mask = agent_valid_mask.clone()
+        inference_time = []
         feat_a_t_dict = {}
         for t in range(self.num_recurrent_steps_val // self.shift):
             if t == 0:
@@ -472,6 +474,7 @@ class SMARTAgentDecoder(nn.Module):
             else:
                 inference_mask = torch.zeros_like(mask)
                 inference_mask[:, (self.num_historical_steps - 1) // self.shift + t - 1] = True
+            tic = time.time()
             edge_index_t, r_t = self.build_temporal_edge(pos_a, head_a, head_vector_a, num_agent, mask, inference_mask)
             if isinstance(data, Batch):
                 batch_s = torch.cat([data['agent']['batch'] + data.num_graphs * t
@@ -518,6 +521,9 @@ class SMARTAgentDecoder(nn.Module):
 
             expanded_index = next_token_idx[..., None, None, None].expand(-1, -1, 6, 4, 2)
             next_token_traj = torch.gather(agent_token_traj_all, 1, expanded_index)                                     # [NA, 5, 6, 4, 2]
+            
+            toc = time.time()
+            inference_time.append((toc - tic)*1000/5)
 
             theta = head_a[:, (self.num_historical_steps - 1) // self.shift - 1 + t]
             cos, sin = theta.cos(), theta.sin()
@@ -578,6 +584,7 @@ class SMARTAgentDecoder(nn.Module):
             feat_a = self.fusion_emb(feat_a)
 
         agent_valid_mask[agent_category != 3] = False
+        print(f"inference time per frame: {torch.mean(torch.tensor(inference_time, dtype=torch.float32)).item(): .3f}ms")
 
         return {
             'pos_a': pos_a[:, (self.num_historical_steps - 1) // self.shift:],
