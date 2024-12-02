@@ -8,7 +8,7 @@ assets/
 # C extensions
 *.so
 /assets
-/data
+# /data
 # Distribution / packaging
 .Python
 build/
@@ -113,29 +113,33 @@ pyg_depend/
 .vscode
 
 # seed project
-av2/
-lightning_logs/
-lightning_logs_/
-lightning_l/
-.DS_Store
 data/argo
 data/res
 data/waymo*
-fig*/
 data/waymo_token
 data/submission
 data/token_seq_emb_nuplan
 data/token_seq_emb_waymo
 data/nuplan*
-submission.tar.gz
 data/feat*
 data/scalable
 data/pos_data
-res_metrics*
-gathered*
+
+av2/
+lightning_logs/
+lightning_logs_/
+lightning_l/
+fig*/
+scripts/
+
 videos/*
 outputs/*
-scripts/
+
+res_metrics*
+gathered*
+
+submission.tar.gz
+.DS_Store
 *.err
 *.out
 *.sbatch

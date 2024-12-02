@@ -664,7 +664,7 @@ def wm2argo(file, dir_name, output_dir):
     file_path = os.path.join(dir_name, file)
     dataset = tf.data.TFRecordDataset(file_path, compression_type='', num_parallel_reads=3)
     for cnt, data in enumerate(dataset):
-        print(cnt)
+        # print(cnt)
         scenario = scenario_pb2.Scenario()
         scenario.ParseFromString(bytearray(data.numpy()))
         save_infos = process_single_data(scenario) # pkl2mtr
@@ -708,7 +708,13 @@ if __name__ == "__main__":
     parser.add_argument('--input_dir', type=str, default='data/waymo/scenario/training')
     parser.add_argument('--output_dir', type=str, default='data/waymo_processed/training')
     args = parser.parse_args()
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    
+    # 单进程运行
     files = os.listdir(args.input_dir)
     for file in tqdm(files):
         wm2argo(file, args.input_dir, args.output_dir)
-    # batch_process9s_transformer(args.input_dir, args.output_dir, num_workers="ur_cpu_count")
+    
+    # 多进程并行
+    # batch_process9s_transformer(args.input_dir, args.output_dir, num_workers=2)

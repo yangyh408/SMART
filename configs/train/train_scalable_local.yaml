@@ -14,8 +14,8 @@ Dataset:
   num_workers: 16
   pin_memory: True
   persistent_workers: True
-  train_raw_dir: ["/mnt/i/smart_waymo_processed/raw/training"]
-  val_raw_dir: ["/mnt/i/smart_waymo_processed/raw/validation"]
+  train_raw_dir: ["data/waymo_processed/training"]
+  val_raw_dir: ["data/waymo_processed/validation"]
   test_raw_dir: []
   transform: WaymoTargetBuilder
   train_processed_dir: []

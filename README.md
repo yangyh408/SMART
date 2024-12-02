@@ -45,14 +45,20 @@
 
     > 下载链接：https://console.cloud.google.com/storage/browser/waymo_open_dataset_motion_v_1_2_0
 
-    下载 Waymo Open Motion Dataset (`scenario protocol`)，文件结构如下:
+    下载 Waymo Open Motion Dataset (`scenario protocol`)到data文件夹下，文件结构如下:
     ```
-    waymo_open_dataset_motion_v_1_2_0
-    ├── scenario
-    │   ├── training
-    │   ├── validation
-    │   ├── testing
+    TrafficNTP
+    ├── data
+    │   ├── waymo
+    │   │   ├── training
+    │   │   ├── validation
+    │   │   ├── testing
     ```
+
+    也可以通过软链接的形式将硬盘中的数据挂载到data文件夹下，如:
+    ```bash
+    ln -s /mnt/i/smart_data/womd_scenario_v_1_2_0/ ~/codes/SMART/waymo
+    ``` 
 
 2. 进行数据预处理
     
@@ -60,11 +66,11 @@
     
     ```bash
     # 训练集
-    python ./data_process/data_preprocess.py --input_dir ${WOMD_DIR}/scenario/training  --output_dir ./data/waymo_processed/training
+    python ./data_process/data_preprocess.py --input_dir ./data/waymo/training  --output_dir ./data/waymo_processed/training
     # 验证集
-    python ./data_process/data_preprocess.py --input_dir ${WOMD_DIR}/scenario/validation  --output_dir ./data/waymo_processed/validation
+    python ./data_process/data_preprocess.py --input_dir ./data/waymo/validation  --output_dir ./data/waymo_processed/validation
     # 测试集
-    python ./data_process/data_preprocess.py --input_dir ${WOMD_DIR}/scenario/testing  --output_dir ./data/waymo_processed/testing
+    python ./data_process/data_preprocess.py --input_dir ./data/waymo/testing  --output_dir ./data/waymo_processed/testing
     ```
 
     预处理后的文件目录如下：
@@ -72,6 +78,10 @@
     ```
     TrafficNTP
     ├── data
+    │   ├── waymo
+    │   │   ├── training
+    │   │   ├── validation
+    │   │   ├── testing
     │   ├── waymo_processed
     │   │   ├── training
     │   │   ├── validation
