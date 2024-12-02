@@ -122,7 +122,7 @@ class RealMetrics:
         log_counts = tfp.stats.histogram(log_feature, edges)
         log_counts /= tf.reduce_sum(log_counts)
 
-        js_divergence = jensenshannon(sim_counts, log_counts)   # cal js_divergence with **2
+        js_divergence = jensenshannon(sim_counts, log_counts)
 
         if plot:
             print(f"JS({field}) = {js_divergence}") 
@@ -134,7 +134,7 @@ class RealMetrics:
             plt.show()
             print("-"*50 + '\n') 
         
-        return js_divergence
+        return js_divergence ** 2       # cal js_divergence with **2
 
     def _KDE_density(self, feature, min_val, max_val):
         eps = 1e-6

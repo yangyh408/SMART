@@ -431,7 +431,8 @@ class SMARTAgentDecoder(nn.Module):
 
     def inference(self,
                   data: HeteroData,
-                  map_enc: Mapping[str, torch.Tensor]) -> Dict[str, torch.Tensor]:
+                  map_enc: Mapping[str, torch.Tensor],
+                  show_detail: bool=False) -> Dict[str, torch.Tensor]:
         eval_mask = data['agent']['valid_mask'][:, self.num_historical_steps - 1]       # [NA] 提取第11帧的代理有效情况
         pos_a = data['agent']['token_pos'].clone()                                      # [NA, 18, 2] token对应的矩形中心点坐标
         head_a = data['agent']['token_heading'].clone()                                 # [NA, 18] token对应航向角
@@ -584,7 +585,9 @@ class SMARTAgentDecoder(nn.Module):
             feat_a = self.fusion_emb(feat_a)
 
         agent_valid_mask[agent_category != 3] = False
-        print(f"inference time per frame: {torch.mean(torch.tensor(inference_time, dtype=torch.float32)).item(): .3f}ms")
+
+        if show_detail:
+            print(f"inference time per frame: {torch.mean(torch.tensor(inference_time, dtype=torch.float32)).item(): .3f}ms")
 
         return {
             'pos_a': pos_a[:, (self.num_historical_steps - 1) // self.shift:],
