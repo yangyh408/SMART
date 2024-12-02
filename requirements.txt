@@ -1,0 +1,10 @@
+torchmetrics==0.7.0
+pytorch-lightning==2.0.2
+waymo-open-dataset-tf-2-12-0==1.6.4
+shapely==2.0.6
+easydict==1.13
+dearpygui==1.8.0
+traci==1.16.0
+rich==13.4.2
+seaborn==0.12.0
+jupyter
