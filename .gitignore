@@ -134,5 +134,7 @@ data/pos_data
 res_metrics*
 gathered*
 videos/*
+scripts/
 *.err
 *.out
+*.sbatch

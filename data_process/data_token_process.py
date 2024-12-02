@@ -10,7 +10,7 @@ move_target_dir = "/share/home/tj24005/data/smart_waymo_processed"
 
 files = []
 
-with open("scripts/data_process.pkl", 'rb') as handle:
+with open("scripts/data_token_process.pkl", 'rb') as handle:
     tasks = pickle.load(handle)
 task_id = int(os.getenv('SLURM_ARRAY_TASK_ID', 0))
 # num_tasks = int(os.getenv('SLURM_ARRAY_TASK_COUNT', 1))

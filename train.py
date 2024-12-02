@@ -9,6 +9,9 @@ from smart.utils.config import load_config_act
 from smart.datamodules import MultiDataModule
 from smart.model import SMART
 from smart.utils.log import Logging
+from pathlib import Path
+
+root_dir = Path(__file__).resolve().parent
 
 torch.set_float32_matmul_precision('medium')
 # torch.backends.cuda.matmul.allow_tf32 = True
@@ -17,30 +20,25 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 if __name__ == '__main__':
     parser = ArgumentParser()
     Predictor_hash = {"smart": SMART, }
-    parser.add_argument('--config', type=str, default='configs/train/train_scalable_custom.yaml')
-    parser.add_argument('--pretrain_ckpt', type=str, default="")
     parser.add_argument('--ckpt_path', type=str, default="")
-    parser.add_argument('--save_ckpt_path', type=str, default=f"ckpt/{datetime.now().strftime('%Y%m%d_%H%M')}")
+    parser.add_argument('--config', type=str, default=root_dir/'configs/train/train_scalable_local.yaml')
+    parser.add_argument('--save_ckpt_path', type=str, default=root_dir/f"ckpt/{datetime.now().strftime('%Y%m%d_%H%M')}")
     args = parser.parse_args()
 
     config = load_config_act(args.config)
-    
-    logger = Logging().log(level='DEBUG')
-    logger.debug(f"> batch_size             : {config.Dataset['train_batch_size']}")
-    logger.debug(f"> num_workers            : {config.Dataset['num_workers']}")
-    logger.debug(f"> accumulate_grad_batches: {config.Trainer['accumulate_grad_batches']}")
 
     Predictor = Predictor_hash[config.Model.predictor]
     strategy = DDPStrategy(find_unused_parameters=True, gradient_as_bucket_view=True)
     Data_config = config.Dataset
     datamodule = MultiDataModule(**vars(Data_config))
 
-    if args.pretrain_ckpt == "":
+    if args.ckpt_path == "":
         model = Predictor(config.Model)
     else:
+        logger = Logging().log(level='DEBUG')
         model = Predictor(config.Model)
-        model.load_params_from_file(filename=args.pretrain_ckpt,
-                                    logger=logger)
+        model.load_params_from_file(filename=args.ckpt_path, logger=logger)
+    
     trainer_config = config.Trainer
     model_checkpoint = ModelCheckpoint(dirpath=args.save_ckpt_path,
                                        filename="{epoch:02d}-{step}-{val_loss:.2f}",
@@ -63,6 +61,7 @@ if __name__ == '__main__':
                         #  limit_train_batches=0.001,
                         #  limit_val_batches=0.01
                     )
+
     if args.ckpt_path == "":
         trainer.fit(model,
                     datamodule)
